@@ -1,26 +1,31 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+use rand::Rng; // For random transaction in stress testing
 
+/// Represents a bank account with a mutex-protected balance
 struct BankAccount {
     balance: Mutex<i32>,
 }
 
 impl BankAccount {
+    /// Creates a new bank account with an initial balance
     fn new(initial_balance: i32) -> Self {
         BankAccount {
             balance: Mutex::new(initial_balance),
         }
     }
 
+    /// Deposits money into the account (protected by a mutex)
     fn deposit(&self, amount: i32) {
-        let mut balance = self.balance.lock().unwrap();
+        let mut balance = self.balance.lock().unwrap(); // Lock the balance
         *balance += amount;
         println!("Deposited: {}, New Balance: {}", amount, *balance);
     }
 
+    /// Withdraws money from the account (protected by a mutex)
     fn withdraw(&self, amount: i32) {
-        let mut balance = self.balance.lock().unwrap();
+        let mut balance = self.balance.lock().unwrap(); // Lock the balance
         if *balance >= amount {
             *balance -= amount;
             println!("Withdrawn: {}, New Balance: {}", amount, *balance);
@@ -29,6 +34,7 @@ impl BankAccount {
         }
     }
 
+    /// Safe transfers between two accounts with timeout to prevent deadlock
     fn transfer_safe(&self, target: &BankAccount, amount: i32) {
         let start = Instant::now();
         while start.elapsed() < Duration::from_millis(500) { // 500ms timeout
@@ -50,6 +56,7 @@ impl BankAccount {
     }
 }
 
+/// Phase 1: Basic Thread Operations
 fn phase_1(account: Arc<BankAccount>) {
     println!("=== Phase 1: Basic Thread Operations ===");
     let handles: Vec<_> = (0..5).map(|i| {
@@ -68,6 +75,7 @@ fn phase_1(account: Arc<BankAccount>) {
     println!();
 }
 
+/// Phase 2: Resource Protection (Testing Mutex Locks)
 fn phase_2(account: Arc<BankAccount>) {
     println!("=== Phase 2: Resource Protection ===");
 
@@ -95,58 +103,38 @@ fn phase_2(account: Arc<BankAccount>) {
     println!();
 }
 
-
-fn phase_3(account1: Arc<BankAccount>, account2: Arc<BankAccount>) {
+/// Phase 3: Deadlock Creation
+ffn phase_3(account1: Arc<BankAccount>, account2: Arc<BankAccount>) {
     println!("=== Phase 3: Deadlock Creation ===");
-    
     let handles = vec![
         thread::spawn({
             let account1 = Arc::clone(&account1);
             let account2 = Arc::clone(&account2);
             move || {
-                let start = Instant::now();
-                while start.elapsed() < Duration::from_millis(500) { // Timeout
-                    if let Ok(_self_balance) = account1.balance.try_lock() {
-                        println!("Locked source account 1");
-                        thread::sleep(Duration::from_millis(100));
-                        if let Ok(_target_balance) = account2.balance.try_lock() {
-                            println!("Locked target account 2");
-                            return;
-                        }
-                    }
-                    thread::sleep(Duration::from_millis(10)); // Avoid busy waiting
-                }
-                println!("Thread 1: Deadlock detected, exiting...");
+                let _lock1 = account1.balance.lock().unwrap();
+                thread::sleep(Duration::from_millis(100)); // Simulate delay
+                let _lock2 = account2.balance.lock().unwrap();
+                println!("Locked both accounts successfully (No deadlock due to ordering).\n");
             }
         }),
         thread::spawn({
             let account1 = Arc::clone(&account1);
             let account2 = Arc::clone(&account2);
             move || {
-                let start = Instant::now();
-                while start.elapsed() < Duration::from_millis(500) { // Timeout
-                    if let Ok(_self_balance) = account2.balance.try_lock() {
-                        println!("Locked source account 2");
-                        thread::sleep(Duration::from_millis(100));
-                        if let Ok(_target_balance) = account1.balance.try_lock() {
-                            println!("Locked target account 1");
-                            return;
-                        }
-                    }
-                    thread::sleep(Duration::from_millis(10)); // Avoid busy waiting
-                }
-                println!("Thread 2: Deadlock detected, exiting...");
+                let _lock2 = account2.balance.lock().unwrap();
+                thread::sleep(Duration::from_millis(100));
+                let _lock1 = account1.balance.lock().unwrap();
+                println!("Locked both accounts successfully.\n");
             }
         }),
     ];
-
     for handle in handles {
         handle.join().unwrap();
     }
     println!();
 }
 
-
+/// Phase 4: Deadlock Resolution
 fn phase_4(account1: Arc<BankAccount>, account2: Arc<BankAccount>) {
     println!("=== Phase 4: Deadlock Resolution ===");
     let handles = vec![
@@ -169,6 +157,27 @@ fn phase_4(account1: Arc<BankAccount>, account2: Arc<BankAccount>) {
         handle.join().unwrap();
     }
     println!();
+}
+
+/// **Stress Testing: Simulate high-load scenario with multiple transactions**
+fn stress_test(account: Arc<BankAccount>){
+    println!("+++ Stress Testing: High Load Simulation ===");
+    let mut rng = rand::thread_rng();
+    let handles: Vec<_> = (0..50).map(|_| {
+        let account = Arc::clone(&account);
+        thread::spawn(move||{
+            let amount = rng.gen_range(10..100);
+            if rng.gen_bool(0.5){
+                account.deposit(amount);
+            } else{
+                account.withdraw(amount);
+            }
+        })
+    }) .collect();
+    for handle in handles {
+        handle.join().unwrap();
+    }
+    println!("Stress Test Completed.\n");
 }
 
 fn main() {
