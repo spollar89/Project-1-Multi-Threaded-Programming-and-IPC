@@ -15,12 +15,12 @@ The project is developed in **Rust** and runs on **Ubuntu** within a **Parallels
 
 ## **Building and Runing the Project**
 
-### ** Clone the repository**
+1. **Clone the repository**
 '''sh
 git clone git@github.com:spollar89/Project-1-Multi-Threading-and-IPC.git 
 cd Project-1-Multi-Threading-and-IPC
 
-Install Dependencies
+2. **Install Dependencies**
 Ensure you have Rust and Cargo installed. If not, install them using: 
 
 curl --proto '=https' --tlsv1.2 =sSf https://sh.rustup.rs | sh
@@ -29,34 +29,42 @@ source $HOME/.cargo/env
 Then, update dependencies:
 cargo update
 
-Build the Project
+3. **Build the Project**
 Run the following command to compile the project:
 cargo build --release
 
-Run Multi-Threaded Banking Simulation
+4. **Run Multi-Threaded Banking Simulation**
 Execute the banking simulation using:
 cargo run --bin banking_simulation
 
-Run IPC Demonstration
+5. **Run IPC Demonstration**
 Execute the IPC program using:
 cargo run --bin ipc_demo
 
 
-Dependecies & Installation
+## **Dependecies & Installation**
+
 Ensure the following dependencies are installed:
 
-Rust Toolchain
+**Rust Toolchain**
+
 install Rust: rust-lang.org
+
 Verify installation:
+
 rustc --version
 cargo --version
 
-Ubuntu-Specific Packages
+**Ubuntu-Specific Packages**
+
 Install necessary Linux utilities: 
+
 sudo apt update && sudo apt install build-essential
 
-Project-Specific Dependencies
+**Project-Specific Dependencies**
+
 There are managed via Cargo.toml. Ensure they are installed:
+
 cargo install --path .
 
 
